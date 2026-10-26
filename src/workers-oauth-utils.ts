@@ -866,6 +866,7 @@ export async function fetchUpstreamAuthToken(params: {
 	client_id: string;
 	client_secret: string;
 	code?: string;
+	state?: string;
 	redirect_uri: string;
 	code_verifier: string;
 }): Promise<[string, string, null] | [null, null, Response]> {
@@ -881,6 +882,10 @@ export async function fetchUpstreamAuthToken(params: {
 		redirect_uri: params.redirect_uri,
 		code_verifier: params.code_verifier,
 	});
+
+	if (params.state) {
+		data.set("state", params.state);
+	}
 
 	const response = await fetch(params.upstream_url, {
 		method: "POST",
