@@ -1,8 +1,10 @@
-
 import { env } from "cloudflare:workers";
 import OAuthProvider from "@cloudflare/workers-oauth-provider";
 import { McpServer } from "@modelcontextprotocol/server";
-import { createMcpHandler, getMcpAuthContext } from "agents/mcp/server";
+import {
+  createMcpHandler,
+  getMcpAuthContext
+} from "agents/mcp/server";
 import { z } from "zod";
 import { handleAccessRequest } from "./access-handler";
 import type { Props } from "./workers-oauth-utils";
@@ -20,6 +22,22 @@ type OuraTokens = {
   refresh_token: string | null;
   expires_at: number;
 };
+
+// Prüft die Berechtigung bei jedem Werkzeugaufruf.
+function requireAuthorizedUser() {
+  const props = getMcpAuthContext()?.props as
+    | Props
+    | undefined;
+
+  if (
+    !props?.email ||
+    !ALLOWED_EMAILS.has(props.email.toLowerCase())
+  ) {
+    throw new Error(
+      "Access denied: You are not authorized to access Oura data."
+    );
+  }
+}
 
 async function saveTokens(tokens: {
   access_token: string;
@@ -41,24 +59,31 @@ async function saveTokens(tokens: {
   );
 }
 
-async function exchangeToken(params: Record<string, string>) {
+async function exchangeToken(
+  params: Record<string, string>
+) {
   const credentials = btoa(
     env.OURA_CLIENT_ID + ":" + env.OURA_CLIENT_SECRET
   );
 
-  const response = await fetch(OURA_AUTH + "/oauth/token", {
-    method: "POST",
-    headers: {
-      Authorization: "Basic " + credentials,
-      "Content-Type": "application/x-www-form-urlencoded",
-      Accept: "application/json"
-    },
-    body: new URLSearchParams(params)
-  });
+  const response = await fetch(
+    OURA_AUTH + "/oauth/token",
+    {
+      method: "POST",
+      headers: {
+        Authorization: "Basic " + credentials,
+        "Content-Type":
+          "application/x-www-form-urlencoded",
+        Accept: "application/json"
+      },
+      body: new URLSearchParams(params)
+    }
+  );
 
   if (!response.ok) {
     throw new Error(
-      "Oura token refresh failed: HTTP " + response.status
+      "Oura token refresh failed: HTTP " +
+        response.status
     );
   }
 
@@ -108,7 +133,9 @@ async function getTokens(): Promise<OuraTokens> {
   );
 
   if (!updated) {
-    throw new Error("Unable to load refreshed Oura token");
+    throw new Error(
+      "Unable to load refreshed Oura token"
+    );
   }
 
   return updated;
@@ -121,20 +148,25 @@ async function getOuraData(
 ) {
   const tokens = await getTokens();
 
-  const url = new URL(OURA_API + "/usercollection/" + endpoint);
+  const url = new URL(
+    OURA_API + "/usercollection/" + endpoint
+  );
+
   url.searchParams.set("start_date", startDate);
   url.searchParams.set("end_date", endDate);
 
   const response = await fetch(url.toString(), {
     headers: {
-      Authorization: "Bearer " + tokens.access_token,
+      Authorization:
+        "Bearer " + tokens.access_token,
       Accept: "application/json"
     }
   });
 
   if (!response.ok) {
     throw new Error(
-      "Oura API request failed: HTTP " + response.status
+      "Oura API request failed: HTTP " +
+        response.status
     );
   }
 
@@ -146,6 +178,7 @@ const dateSchema = z.object({
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/)
     .describe("Start date in YYYY-MM-DD format"),
+
   end_date: z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/)
@@ -155,18 +188,11 @@ const dateSchema = z.object({
 function createServer() {
   const server = new McpServer({
     name: "Oura MCP",
-    version: "1.0.0"
+    version: "1.0.1"
   });
 
-  const props = getMcpAuthContext()?.props as Props | undefined;
-
-  // Nur die erlaubte, angemeldete Person erhält Oura-Werkzeuge.
-  if (
-    !props?.email ||
-    !ALLOWED_EMAILS.has(props.email.toLowerCase())
-  ) {
-    return server;
-  }
+  // Werkzeuge werden immer registriert.
+  // Die Berechtigung wird bei jedem Aufruf geprüft.
 
   server.registerTool(
     "get_sleep",
@@ -177,6 +203,8 @@ function createServer() {
     },
     async ({ start_date, end_date }) => {
       try {
+        requireAuthorizedUser();
+
         const data = await getOuraData(
           "daily_sleep",
           start_date,
@@ -197,9 +225,10 @@ function createServer() {
           content: [
             {
               type: "text" as const,
-              text: error instanceof Error
-                ? error.message
-                : "Unknown Oura error"
+              text:
+                error instanceof Error
+                  ? error.message
+                  : "Unknown Oura error"
             }
           ]
         };
@@ -216,6 +245,8 @@ function createServer() {
     },
     async ({ start_date, end_date }) => {
       try {
+        requireAuthorizedUser();
+
         const data = await getOuraData(
           "daily_readiness",
           start_date,
@@ -236,9 +267,10 @@ function createServer() {
           content: [
             {
               type: "text" as const,
-              text: error instanceof Error
-                ? error.message
-                : "Unknown Oura error"
+              text:
+                error instanceof Error
+                  ? error.message
+                  : "Unknown Oura error"
             }
           ]
         };
@@ -255,6 +287,8 @@ function createServer() {
     },
     async ({ start_date, end_date }) => {
       try {
+        requireAuthorizedUser();
+
         const data = await getOuraData(
           "daily_activity",
           start_date,
@@ -275,9 +309,10 @@ function createServer() {
           content: [
             {
               type: "text" as const,
-              text: error instanceof Error
-                ? error.message
-                : "Unknown Oura error"
+              text:
+                error instanceof Error
+                  ? error.message
+                  : "Unknown Oura error"
             }
           ]
         };
@@ -291,7 +326,11 @@ function createServer() {
 const mcpHandler = createMcpHandler(createServer);
 
 const apiHandler = {
-  fetch(request: Request, bindings: Env, ctx: ExecutionContext) {
+  fetch(
+    request: Request,
+    bindings: Env,
+    ctx: ExecutionContext
+  ) {
     return mcpHandler(request, bindings, ctx);
   }
 } satisfies ExportedHandler<Env>;
