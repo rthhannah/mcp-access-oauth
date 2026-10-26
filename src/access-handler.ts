@@ -137,14 +137,15 @@ export async function handleAccessRequest(
 		}
 
 		// Exchange the code for an access token, including the PKCE verifier
-		const [accessToken, idToken, errResponse] = await fetchUpstreamAuthToken({
-			client_id: env.ACCESS_CLIENT_ID,
-			client_secret: env.ACCESS_CLIENT_SECRET,
-			code: searchParams.get("code") ?? undefined,
-			redirect_uri: new URL("/callback", request.url).href,
-			upstream_url: env.ACCESS_TOKEN_URL,
-			code_verifier: codeVerifier,
-		});
+	const [accessToken, idToken, errResponse] = await fetchUpstreamAuthToken({
+    client_id: env.ACCESS_CLIENT_ID,
+    client_secret: env.ACCESS_CLIENT_SECRET,
+    code: searchParams.get("code") ?? undefined,
+    state: searchParams.get("state") ?? undefined,
+    redirect_uri: new URL("/callback", request.url).href,
+    upstream_url: env.ACCESS_TOKEN_URL,
+    code_verifier: codeVerifier,
+});
 		if (errResponse) {
 			return errResponse;
 		}
