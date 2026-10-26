@@ -112,6 +112,7 @@ export async function handleAccessRequest(
 	}
 
 	if (request.method === "GET" && pathname === "/callback") {
+		console.log("OAuth-Diagnose: state vorhanden =", searchParams.has("state"));
 		// Validate OAuth state (retrieves stored data from KV)
 		let oauthReqInfo: AuthRequest;
 		let codeVerifier: string;
