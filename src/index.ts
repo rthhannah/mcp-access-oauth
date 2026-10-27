@@ -401,6 +401,66 @@ function createServer() {
       }
     );
   }
+  server.registerTool(
+  "get_heart_rate",
+  {
+    description: "Get Oura heart rate measurements for a datetime range.",
+    inputSchema: {
+      start_datetime: z.string(),
+      end_datetime: z.string(),
+    },
+  },
+  async ({ start_datetime, end_datetime }) => {
+    try {
+      requireAuthorizedUser();
+
+      const tokens = await getTokens();
+
+      const url = new URL(
+        "https://api.ouraring.com/v2/usercollection/heartrate"
+      );
+
+      url.searchParams.set("start_datetime", start_datetime);
+      url.searchParams.set("end_datetime", end_datetime);
+
+      const response = await fetch(url.toString(), {
+        headers: {
+          Authorization: `Bearer ${tokens.access_token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(
+          `Oura API error: ${response.status} ${await response.text()}`
+        );
+      }
+
+      const data = await response.json();
+
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: JSON.stringify(data),
+          },
+        ],
+      };
+    } catch (error) {
+      return {
+        isError: true,
+        content: [
+          {
+            type: "text" as const,
+            text:
+              error instanceof Error
+                ? error.message
+                : "Unknown Oura error",
+          },
+        ],
+      };
+    }
+  }
+);
   return server;
 }
 
