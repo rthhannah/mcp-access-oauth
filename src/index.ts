@@ -319,7 +319,88 @@ function createServer() {
       }
     }
   );
+  // Zusätzliche Oura-Daten für den persönlichen Trainer
 
+  const extraTools = [
+    {
+      name: "get_workouts",
+      description: "Get recorded workouts, including activity type, duration and intensity.",
+      endpoint: "workout",
+    },
+    {
+      name: "get_sessions",
+      description: "Get Oura guided and unguided sessions.",
+      endpoint: "session",
+    },
+    {
+      name: "get_detailed_sleep",
+      description: "Get detailed sleep periods and available sleep measurements.",
+      endpoint: "sleep",
+    },
+    {
+      name: "get_daily_stress",
+      description: "Get daily stress and recovery measurements.",
+      endpoint: "daily_stress",
+    },
+    {
+      name: "get_daily_resilience",
+      description: "Get daily resilience measurements.",
+      endpoint: "daily_resilience",
+    },
+    {
+      name: "get_daily_spo2",
+      description: "Get daily blood oxygen measurements recorded during sleep.",
+      endpoint: "daily_spo2",
+    },
+    {
+      name: "get_vo2_max",
+      description: "Get available Oura VO2 max estimates.",
+      endpoint: "vO2_max",
+    },
+  ] as const;
+
+  for (const tool of extraTools) {
+    server.registerTool(
+      tool.name,
+      {
+        description: tool.description,
+        inputSchema: dateSchema,
+      },
+      async ({ start_date, end_date }) => {
+        try {
+          requireAuthorizedUser();
+
+          const data = await getOuraData(
+            tool.endpoint,
+            start_date,
+            end_date
+          );
+
+          return {
+            content: [
+              {
+                type: "text" as const,
+                text: JSON.stringify(data),
+              },
+            ],
+          };
+        } catch (error) {
+          return {
+            isError: true,
+            content: [
+              {
+                type: "text" as const,
+                text:
+                  error instanceof Error
+                    ? error.message
+                    : "Unknown Oura error",
+              },
+            ],
+          };
+        }
+      }
+    );
+  }
   return server;
 }
 
