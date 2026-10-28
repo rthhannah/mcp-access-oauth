@@ -164,20 +164,22 @@ async function getOuraData(
     }
   });
 
-  if (!response.ok) {
+    if (!response.ok) {
     const errorBody = await response.text();
 
-    console.error(
-      "Oura API error:",
-      response.status,
-      errorBody
-    );
+    console.error("Oura API diagnostic:", {
+      status: response.status,
+      responseUrl: response.url,
+      contentType: response.headers.get("content-type"),
+      server: response.headers.get("server"),
+      body: errorBody.slice(0, 1000)
+    });
 
     throw new Error(
       "Oura API request failed: HTTP " +
         response.status +
         " - " +
-        errorBody
+        errorBody.slice(0, 300)
     );
   }
 
