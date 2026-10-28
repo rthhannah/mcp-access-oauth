@@ -164,20 +164,23 @@ async function getOuraData(
   });
 
   if (!response.ok) {
-  const errorBody = await response.text();
+    const errorBody = await response.text();
 
-  console.error(
-    "Oura API error:",
-    response.status,
-    errorBody
-  );
-
-  throw new Error(
-    "Oura API request failed: HTTP " +
-      response.status +
-      " - " +
+    console.error(
+      "Oura API error:",
+      response.status,
       errorBody
-  );
+    );
+
+    throw new Error(
+      "Oura API request failed: HTTP " +
+        response.status +
+        " - " +
+        errorBody
+    );
+  }
+
+  return response.json();
 }
 
 const dateSchema = z.object({
