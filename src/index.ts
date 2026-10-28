@@ -154,7 +154,8 @@ async function getOuraData(
 
   url.searchParams.set("start_date", startDate);
   url.searchParams.set("end_date", endDate);
-
+  console.log("Oura request URL:", url.toString());
+  console.log("Oura endpoint:", endpoint);
   const response = await fetch(url.toString(), {
     headers: {
       Authorization:
